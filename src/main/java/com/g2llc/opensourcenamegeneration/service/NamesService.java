@@ -72,7 +72,7 @@ public class NamesService {
 
     private String addParameter(String url, String parameter) {
         if (StringUtils.isNotBlank(parameter))
-            return url.contains(PARAMETER_SEPARATOR) ? url + PARAMETER_SEPARATOR + parameter : url + parameter;
+            return url.contains("=") ? url + PARAMETER_SEPARATOR + parameter : url + parameter;
         return url;
     }
 
