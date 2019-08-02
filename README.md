@@ -1,4 +1,6 @@
 # App name opensourcenamegeneration
+This is a test app to connect to name generator API 
+https://namey.muffinlabs.com
 
 ## There are some examples of json request body to send:
 
