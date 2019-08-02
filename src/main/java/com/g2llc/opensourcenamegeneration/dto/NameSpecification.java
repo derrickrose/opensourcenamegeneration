@@ -7,7 +7,7 @@ import lombok.Setter;
 @Setter
 public class NameSpecification {
 
-    private String count;
+    private Integer count;
     private Boolean withSurname;
     private String frequency;
     private String type;
