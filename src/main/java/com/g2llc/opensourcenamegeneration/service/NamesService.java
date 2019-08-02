@@ -72,13 +72,13 @@ public class NamesService {
 
     private String addParameter(String url, String parameter) {
         if (StringUtils.isNotBlank(parameter))
-            return url + PARAMETER_SEPARATOR + parameter;
+            return url.contains(PARAMETER_SEPARATOR) ? url + PARAMETER_SEPARATOR + parameter : url + parameter;
         return url;
     }
 
 
     private static final String validateType(NameSpecification nameSpecification) {
-        if (StringUtils.isBlank(nameSpecification.getType()) || StringUtils.contains(nameSpecification.getType(),"any"))
+        if (StringUtils.isBlank(nameSpecification.getType()) || StringUtils.contains(nameSpecification.getType(), "any"))
             return "";
 
         if (TYPE_PATTERN.matcher(nameSpecification.getType()).find()) {
@@ -88,7 +88,7 @@ public class NamesService {
     }
 
     private static final String validateWithSurname(NameSpecification nameSpecification) {
-        if ((StringUtils.isBlank(nameSpecification.getType()) || ! StringUtils.contains(nameSpecification.getType(), "surname")) && nameSpecification.getWithSurname() != null) {
+        if ((StringUtils.isBlank(nameSpecification.getType()) || !StringUtils.contains(nameSpecification.getType(), "surname")) && nameSpecification.getWithSurname() != null) {
             return "with_surname=" + nameSpecification.getWithSurname();
         }
 
