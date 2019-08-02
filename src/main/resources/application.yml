@@ -1,0 +1,6 @@
+server:
+  port: 9090
+api:
+  name:
+    generator:
+      baseUrl: https://namey.muffinlabs.com/name.json?
