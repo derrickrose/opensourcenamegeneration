@@ -2,7 +2,7 @@ package com.g2llc.opensourcenamegeneration.service;
 
 import com.g2llc.opensourcenamegeneration.dto.NameSpecification;
 import com.g2llc.opensourcenamegeneration.error.CustomException;
-import com.sun.javafx.sg.prism.NGQuadCurve;
+import lombok.extern.log4j.Log4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,16 +10,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@Log4j
 public class NamesService {
 
     private static final int MAXIMUM_NAMES_PER_HIT = 5;
 
     @Value("${api.name.generator.baseUrl}")
     private String remoteNameGeneratorBaseUrl;
+
+    @Value("${maximum.names.count}")
+    private int maximumNamesCount;
 
     private static final Pattern FREQUENCY_PATTERN = Pattern.compile("common|rare|all");
     private static final Pattern TYPE_PATTERN = Pattern.compile("male|female|surname");
@@ -40,11 +43,13 @@ public class NamesService {
 
         do {
             List<String> array = new ArrayList<>();
-            System.out.println("Current process : " + loop);
+            log.debug("Connection number " + loop);
             array.addAll(connect(url));
+
 
             if (nameSpecification.getCount().intValue() <= MAXIMUM_NAMES_PER_HIT) return array;
 
+            addNames(nameSpecification, names, array);
             loop++;
         } while (isCrawlToContinue(nameSpecification, names));
 
@@ -63,10 +68,10 @@ public class NamesService {
         try {
             List<String> array = restTemplate.getForObject(url, ArrayList.class);
 
-            System.err.println("===> " + array.toString());
+            log.debug("===> " + array.toString());
             return array;
         } catch (Error e) {
-            System.err.println("Exception on connection ");
+            log.error("Exception on connection.");
         }
         return null;
     }
@@ -88,7 +93,8 @@ public class NamesService {
         if (nameSpecification.getCount().intValue() <= MAXIMUM_NAMES_PER_HIT)
             return false;
 
-        return isNumberCompleted(nameSpecification, names);
+
+        return !isNumberCompleted(nameSpecification, names);
 
     }
 
@@ -97,29 +103,23 @@ public class NamesService {
     }
 
     private final String buildUrl(NameSpecification nameSpecification) {
-
-
-//        return remoteNameGeneratorBaseUrl + "count=1&with_surname=true&frequency=common";
-
         String url = remoteNameGeneratorBaseUrl;
         url = addParameter(url, validateCount(nameSpecification));
         url = addParameter(url, validateType(nameSpecification));
         url = addParameter(url, validateWithSurname(nameSpecification));
         url = addParameter(url, validateFrequency(nameSpecification));
-
-
         return url;
     }
 
 
-    private static final String validateCount(NameSpecification nameSpecification) {
+    private final String validateCount(NameSpecification nameSpecification) {
         if (nameSpecification == null)
             throw new CustomException("Missing mandatory field count.");
 
 //        if (nameSpecification.getCount().intValue() < 1 || nameSpecification.getCount().intValue() > 5)
 //            throw new CustomException("Incorrect value of field count.");
 
-        if (nameSpecification.getCount().intValue() < 1)
+        if (nameSpecification.getCount().intValue() < 1 || nameSpecification.getCount().intValue() > maximumNamesCount)
             throw new CustomException("Incorrect value of field count.");
 
         if (nameSpecification.getCount().intValue() > MAXIMUM_NAMES_PER_HIT)

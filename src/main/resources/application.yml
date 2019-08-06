@@ -4,3 +4,6 @@ api:
   name:
     generator:
       baseUrl: https://namey.muffinlabs.com/name.json?
+maximum:
+  names:
+    count: 500
