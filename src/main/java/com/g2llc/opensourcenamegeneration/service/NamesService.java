@@ -2,19 +2,21 @@ package com.g2llc.opensourcenamegeneration.service;
 
 import com.g2llc.opensourcenamegeneration.dto.NameSpecification;
 import com.g2llc.opensourcenamegeneration.error.CustomException;
+import com.sun.javafx.sg.prism.NGQuadCurve;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
 public class NamesService {
+
+    private static final int MAXIMUM_NAMES_PER_HIT = 5;
 
     @Value("${api.name.generator.baseUrl}")
     private String remoteNameGeneratorBaseUrl;
@@ -31,18 +33,67 @@ public class NamesService {
     RestTemplate restTemplate;
 
     public List<String> getRandomNames(NameSpecification nameSpecification) {
-        String url = buildUrl(nameSpecification);
-        System.out.println("===> origin " + remoteNameGeneratorBaseUrl + "count=1&with_surname=true&frequency=common");
 
-        System.out.println("===> " + url);
+        String url = buildUrl(nameSpecification);
+        int loop = 1;
+        Set<String> names = new HashSet<>();
+
+        do {
+            List<String> array = new ArrayList<>();
+            System.out.println("Current process : " + loop);
+            array.addAll(connect(url));
+
+            if (nameSpecification.getCount().intValue() <= MAXIMUM_NAMES_PER_HIT) return array;
+
+            loop++;
+        } while (isCrawlToContinue(nameSpecification, names));
+
+
+        return convertSetToList(names);
+
+    }
+
+    private static final List<String> convertSetToList(Set names) {
+        List<String> array = new ArrayList<>();
+        array.addAll(names);
+        return array;
+    }
+
+    private List<String> connect(String url) {
         try {
             List<String> array = restTemplate.getForObject(url, ArrayList.class);
 
             System.err.println("===> " + array.toString());
             return array;
         } catch (Error e) {
+            System.err.println("Exception on connection ");
         }
         return null;
+    }
+
+    private static final void addNames(NameSpecification nameSpecification, Set names, List<String> array) {
+        if (isNumberCompleted(nameSpecification, names) || array == null || array.isEmpty()) {
+            return;
+        }
+        for (String str : array) {
+            if (isNumberCompleted(nameSpecification, names)) {
+                break;
+            }
+            names.add(str);
+        }
+    }
+
+
+    private static final boolean isCrawlToContinue(NameSpecification nameSpecification, Set names) {
+        if (nameSpecification.getCount().intValue() <= MAXIMUM_NAMES_PER_HIT)
+            return false;
+
+        return isNumberCompleted(nameSpecification, names);
+
+    }
+
+    private static final boolean isNumberCompleted(NameSpecification nameSpecification, Set names) {
+        return nameSpecification.getCount().intValue() <= names.size();
     }
 
     private final String buildUrl(NameSpecification nameSpecification) {
@@ -65,9 +116,16 @@ public class NamesService {
         if (nameSpecification == null)
             throw new CustomException("Missing mandatory field count.");
 
-        if (nameSpecification.getCount().intValue() < 1 || nameSpecification.getCount().intValue() > 5)
+//        if (nameSpecification.getCount().intValue() < 1 || nameSpecification.getCount().intValue() > 5)
+//            throw new CustomException("Incorrect value of field count.");
+
+        if (nameSpecification.getCount().intValue() < 1)
             throw new CustomException("Incorrect value of field count.");
-        return "count=" + nameSpecification.getCount();
+
+        if (nameSpecification.getCount().intValue() > MAXIMUM_NAMES_PER_HIT)
+            return "count=" + MAXIMUM_NAMES_PER_HIT;
+
+        return "count=" + nameSpecification.getCount().intValue();
     }
 
     private String addParameter(String url, String parameter) {
@@ -111,8 +169,6 @@ public class NamesService {
             throw new CustomException("Missing or invalid information frequency.");
 
         String frequency = validateFrequencyRange(nameSpecification);
-
-        System.err.println("here frequency " + frequency);
 
         if (StringUtils.isBlank(frequency))
             frequency = buildFrequency(nameSpecification);
