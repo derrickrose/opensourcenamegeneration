@@ -24,6 +24,9 @@ public class NamesService {
     @Value("${maximum.names.count}")
     private int maximumNamesCount;
 
+    @Value("${maximum.connections.allowed}")
+    private int maximumConnectionsAllowed; // this is put in order to avoid endless loop
+
     private static final Pattern FREQUENCY_PATTERN = Pattern.compile("common|rare|all");
     private static final Pattern TYPE_PATTERN = Pattern.compile("male|female|surname");
     private static final String PARAMETER_SEPARATOR = "&";
@@ -51,7 +54,7 @@ public class NamesService {
 
             addNames(nameSpecification, names, array);
             loop++;
-        } while (isCrawlToContinue(nameSpecification, names));
+        } while (isCrawlToContinue(nameSpecification, names, loop));
 
 
         return convertSetToList(names);
@@ -89,13 +92,14 @@ public class NamesService {
     }
 
 
-    private static final boolean isCrawlToContinue(NameSpecification nameSpecification, Set names) {
+    private final boolean isCrawlToContinue(NameSpecification nameSpecification, Set names, int loop) {
         if (nameSpecification.getCount().intValue() <= MAXIMUM_NAMES_PER_HIT)
             return false;
 
+        if (loop >= maximumConnectionsAllowed)
+            return false;
 
         return !isNumberCompleted(nameSpecification, names);
-
     }
 
     private static final boolean isNumberCompleted(NameSpecification nameSpecification, Set names) {

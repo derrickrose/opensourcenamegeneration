@@ -7,3 +7,5 @@ api:
 maximum:
   names:
     count: 500
+  connections:
+    allowed: 200
